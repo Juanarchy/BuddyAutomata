@@ -1,8 +1,9 @@
 from imports import *
 #Sample runnable script
-my_world = aworld('my world', [], [], 0)
+my_world = aworld('the simulation', [], [], 0)
 
 my_world.add_actor(Food('Wumpa fruit', alocation((10,10),my_world),"Sweetness",10,10,5,my_world))
+my_world.add_actor(adude('Soni',alocation((-10,-10),my_world,[],"Soni's gooning corner"),my_world,[],Gooner('Gooner')))
 my_world.add_actor(SmartDude('Vampire',alocation((rng.integers(0,20),rng.integers(0,20)),my_world),my_world,[],Vampire('Blood','bloodier'),{},[]))
 my_world.add_actor(SmartDude('Foo 1',alocation((rng.integers(0,20),rng.integers(0,20)),my_world),my_world,[],Glutton('Glutton'),{},[]))
 my_world.add_actor(SmartDude('Cannibal',alocation((10,0),my_world,[]),my_world,[],Cannibal('Cannibal'),{},[]))

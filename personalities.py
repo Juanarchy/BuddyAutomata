@@ -70,3 +70,14 @@ class Vampire(Glutton):
         self.attach_specifics_higher()
     def add_permanent(self, buddy):
         buddy.permanent_personalities.append(self)
+
+class Gooner(apersonality):
+    def __init__(self, name, specific_gauges = {}, specific_skills = [], specific_needs = []):
+        super().__init__(name, specific_gauges, specific_skills, specific_needs)
+        self.specific_gauges={'Gooning':10}
+        self.specific_skills=[Goon('Goon',0)]
+        self.specific_needs=[adecayneed('Arousal', 'aroused',Fullness(50,'triggered'),Fullness(90,'about to cum'),Fullness(10,'urged'),Fullness(50,'actual'),'goon',['Gooning'],1,'like gooning',5)]
+        self.state_word='the absence of its Waifu'
+        self.attach_specifics_higher()
+    def add_permanent(self, buddy):
+        buddy.permanent_personalities.append(self)

@@ -13,6 +13,14 @@ class askill:
     def update_parameters(self, parameters):
         self.parameters.update(parameters)
 
+class Goon(askill):
+    def __init__(self, name, parameters):
+        super().__init__(name, parameters)
+    def action(self, buddy, top=True):
+        buddy.satisfy_needs_automatic('goon')
+        print('Buddy '+buddy.name+' gooned for a while.')
+        return True
+
 class asensing(askill):
     #A sensing is a skill which, on action, returns some data related to an actor.
     def __init__(self, name, parameters):
@@ -169,7 +177,10 @@ class alogic(askill):
     def evaluate_result(self,buddy,skill):
         return skill.action(buddy)
     def apply_logic(self,considering):
-        return [considering[0]]
+        if len(considering)>0:
+            return [considering[0]]
+        else:
+            return []
     
 class SimpleLogic(alogic):
     #The simplest possible logic, always chooses first skill in skill list
