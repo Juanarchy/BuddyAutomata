@@ -1,5 +1,5 @@
 from imports import *
-
+#Sample runnable script
 my_world = aworld('my world', [], [], 0)
 
 my_world.add_actor(Food('Wumpa fruit', alocation((10,10),my_world),"Sweetness",10,10,5,my_world))
