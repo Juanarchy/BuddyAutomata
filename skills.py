@@ -106,7 +106,6 @@ class SearchNearbyDrain(aconcreteskill):
                 actor.gauges[self.parameters['desired_gauge']]=0
                 new_vampirism=next((personality for personality in buddy.permanent_personalities if (hasattr(personality,'vampiric_desire') and personality.vampiric_desire==self.parameters['desired_gauge'])),buddy.personality)
                 print(actor.name+' becomes a '+ new_vampirism.name+'!')
-                input('\nPress enter to continue.\n')
                 actor.new_personality(type(new_vampirism)(new_vampirism.vampiric_desire,new_vampirism.yearn))
                 ws.Beep(220,500)
                 buddy.world.upkeep()
