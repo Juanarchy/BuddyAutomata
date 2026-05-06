@@ -37,7 +37,7 @@ def scent_func(params):
 
 class afield:
     #A Field is an object that represents a mathematical field in a world.
-    def __init__(self,name:str,funct:function,parameters:dict,realm:str,is_perceptible:bool,is_transient:bool=True):
+    def __init__(self,name:str,funct,parameters:dict,realm:str,is_perceptible:bool,is_transient:bool=True):
         self.name=name                      #It has a name
         self.constructor=funct              #a function constructor (as described above)
         self.parameters=parameters          #a dictionary of parameters
