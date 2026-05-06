@@ -28,5 +28,5 @@ while True:
         place=alocation((rng.integers(0,20),rng.integers(0,20)),my_world)
         my_world.add_actor(Food('Wumpa fruit', place,"Sweetness",10,10,10,my_world))
         print('A fruit appeared at '+ place.__repr__()+'!')
-        input("Press enter to advance.")
-        print()
+    input("Press enter to advance.")
+    print()
