@@ -4,16 +4,17 @@ from copy import deepcopy
 rng = np.random.default_rng()
 
 class askill:
-    #A skill is a parametrized object that can be available to actors related to how they act.
-    def __init__(self,name,parameters):
-        self.name=name
-        self.parameters=parameters
-    def action(self,buddy,top=True):
+    #A skill is a parametrized object that can be available to actors and is related to how they act.
+    def __init__(self,name:str,parameters:dict):
+        self.name=name                  #it has a name string
+        self.parameters=parameters      #and a dictionary of parameters
+    def action(self,buddy,top=True):    #It has a method that determines how an actor acts when performing the skill
         pass
-    def update_parameters(self, parameters):
+    def update_parameters(self, parameters): #And a way to update the parameters dictionary.
         self.parameters.update(parameters)
 
 class Goon(askill):
+    #A simple skill that satisfies needs looking for the 'goon' keyword
     def __init__(self, name, parameters):
         super().__init__(name, parameters)
     def action(self, buddy, top=True):
@@ -22,7 +23,7 @@ class Goon(askill):
         return True
 
 class asensing(askill):
-    #A sensing is a skill which, on action, returns some data related to an actor.
+    #A Sensing is a Skill which, on action, returns some data related to an actor.
     def __init__(self, name, parameters):
         super().__init__(name, parameters)
     def action(self, buddy, top=True):
@@ -30,7 +31,7 @@ class asensing(askill):
         return data
 
 class asearch(asensing):
-    #A search is a sensing that, on action, returns a position with a desirable quality.
+    #A search is a Sensing that, on action, returns a position with a desirable quality.
     def __init__(self, name, parameters):
         super().__init__(name, parameters)
     def action(self, buddy, top=True):
@@ -38,7 +39,7 @@ class asearch(asensing):
         return buddy.position,quality
     
 class Radius2DSearch(asearch):
-    #Returns a position maximizing or minimizing a percieved realm of fields via random search in a radius.
+    #On action returns a position maximizing or minimizing the superposition of fields of some realm via random search of with a number nsamples^2 of samples in a circle of some radius.
     def __init__(self, name, parameters={'realm':None,'radius':0,'nsamples':10,'maximize':True}):
         super().__init__(name, parameters)
     def action(self,buddy,top=True):
@@ -63,12 +64,12 @@ class Radius2DSearch(asearch):
         deltay=r*np.sin(theta)
         xlines=center[0]+deltax
         ylines=center[1]+deltay
-        #Build mesh for evaluation
+        #Build intersection mesh for lines x=xlines, y=ylines, to be used as evaluation coordinates
         xsearch,ysearch = np.meshgrid(xlines,ylines,indexing='xy')
         xsearch,ysearch = xsearch.flatten(),ysearch.flatten()
         #Evaluate sum of fields if there's more than one
         evalu=np.sum(np.array([field.evaluate(xsearch,ysearch,buddy.world.time) for field in interesting_fields]),axis=0) if len(interesting_fields)>1 else interesting_fields[0].evaluate(xsearch,ysearch,buddy.world.time)
-        #Location of more optimal place
+        #Location of most optimal place in sample
         ind = np.argmax(evalu) if self.parameters['maximize'] else np.argmin(evalu)
         xfound = xsearch[ind]
         yfound = ysearch[ind]
@@ -77,7 +78,7 @@ class Radius2DSearch(asearch):
         return newl,evalu[ind]
 
 class aconcreteskill(askill):
-    #A concrete skill is a skill that, on an action considered successful, has results requiring a world upkeep. Returns a boolean representing if it succeeded.
+    #A ConcreteSkill is a Skill that, on an action considered successful, has results requiring a world upkeep. Returns a boolean representing if it succeeded.
     def __init__(self, name, parameters):
         super().__init__(name, parameters)
     def action(self, buddy, top=True):
@@ -91,13 +92,13 @@ class aconcreteskill(askill):
         return worked
 
 class SearchNearbyDrain(aconcreteskill):
-    #On success, buddy either drains a target, or moves closer to where it thinks could be one.
+    #On success, buddy either drains a target, or moves closer to where it thinks there could be one.
     def __init__(self, name, parameters:dict={'drainable_types':[],'desired_gauge':'','drain_radius':0.0}):
         super().__init__(name, parameters)
 
     def action(self, buddy, top=True):
         worked=False
-        #Buddy looks at actors that are drainable, if there's one inside its eat radius, buddy drains it and converts actor to buddy's relevant vampirism
+        #Buddy looks at actors that are drainable. If there's one inside its eat radius, buddy drains it and converts actor to buddy's relevant vampirism
         for actor in buddy.world.actors:
             if actor is not buddy and isinstance(actor,tuple(self.parameters['drainable_types'])) and hasattr(actor,'gauges') and self.parameters['desired_gauge'] in actor.gauges.keys() and actor.gauges[self.parameters['desired_gauge']]>0 and buddy.distance_to(actor)<=self.parameters['drain_radius']:
                 print('Buddy '+buddy.name+' spots '+actor.name)
@@ -106,7 +107,7 @@ class SearchNearbyDrain(aconcreteskill):
                 actor.gauges[self.parameters['desired_gauge']]=0
                 new_vampirism=next((personality for personality in buddy.permanent_personalities if (hasattr(personality,'vampiric_desire') and personality.vampiric_desire==self.parameters['desired_gauge'])),buddy.personality)
                 print(actor.name+' becomes a '+ new_vampirism.name+'!')
-                actor.new_personality(type(new_vampirism)(new_vampirism.vampiric_desire,new_vampirism.yearn))
+                actor.new_personality(type(new_vampirism)(new_vampirism.vampiric_desire))
                 ws.Beep(220,500)
                 buddy.world.upkeep()
                 worked=True
@@ -117,7 +118,7 @@ class SearchNearbyDrain(aconcreteskill):
 
         #Using each search skill in the relevant realm, it chooses the one producing the highest intensity
         for skill in buddy.skills:
-            if isinstance(skill,asearch) and self.parameters['desired_gauge'].lower()+' scent' in skill.parameters['realm'].lower():
+            if isinstance(skill,asearch) and 'realm' in skill.parameters.keys() and self.parameters['desired_gauge'].lower()+' scent' in skill.parameters['realm'].lower():
                 potloc,potscent=skill.action(buddy,False)
                 if potscent>=maxscent:
                     maxscent=potscent
@@ -131,11 +132,12 @@ class SearchNearbyDrain(aconcreteskill):
         return worked
 
 class SearchNearbyEat(aconcreteskill):
+    #On success, buddy either eats a target, or moves closer to where it thinks there could be one.
     def __init__(self, name, parameters:dict={'eatable_types':[],'eat_radius':0.0,'appetizing_realms':[]}):
         super().__init__(name, parameters)
     def action(self,buddy,top=True):
         worked=False
-        #Buddy looks at actors that are eatable, if there's one inside its eat radius, it eats it.
+        #Buddy looks at actors that are eatable. If there's one inside its eat radius, it eats it and the action is considered successful.
         for actor in buddy.world.actors:
             if actor is not buddy and isinstance(actor,tuple(self.parameters['eatable_types'])) and buddy.distance_to(actor)<=self.parameters['eat_radius']:
                 print('Buddy '+buddy.name+' spots '+actor.name)
@@ -152,13 +154,14 @@ class SearchNearbyEat(aconcreteskill):
 
         #Using each search skill, it chooses the one producing the highest intensity
         for skill in buddy.skills:
-            if isinstance(skill,asearch) and skill.parameters['realm'] in self.parameters['appetizing_realms']:
+            if isinstance(skill,asearch) and 'realm' in skill.parameters.keys() and skill.parameters['realm'] in self.parameters['appetizing_realms']:
                 potloc,potscent=skill.action(buddy,False)
                 if potscent>=maxscent:
                     maxscent=potscent
                     chosenloc=potloc
         
-        if maxscent>0:
+        #If the max field value found is significantly nonzero, the action is considered successful and buddy moves to the chosen location.
+        if abs(maxscent)>1e-15:
             buddy.move(chosenloc)
             buddy.world.upkeep()
             worked=True
@@ -166,7 +169,7 @@ class SearchNearbyEat(aconcreteskill):
         return worked
     
 class alogic(askill):
-    #A logic is a skill that links a need to a skill (deduce_skill), filters skills to perform (apply_logic), and evaluates performed skills.
+    #A Logic is a Skill that links Needs to other Skills (deduce_skill), filters skills to perform (apply_logic), and evaluates performed skills.
     def __init__(self, name, parameters):
         super().__init__(name, parameters)
     def action(self,buddy,top=True):
@@ -182,35 +185,43 @@ class alogic(askill):
             return []
     
 class SimpleLogic(alogic):
-    #The simplest possible logic, always chooses first skill in skill list
+    #The simplest possible Logic; always chooses first Skill in Skill list.
     def __init__(self):
         super().__init__('Choose First', 0)
 
 class RandomMemoryLogic(alogic):
-    #Logic that keeps a record of needs that have been satisfied by skills and wether those skills worked last time they were performed.
-    #Prioritizes skills known to work, over random unknown skills, over skills known not to work.
-    #If a need is satisfied, it doesn't suggest its known useful skill.
+    #Logic that keeps a record of Needs that have been satisfied by a Skill and wether those Skills worked last time they were performed.
+    #Prioritizes Skills known to work, over random unknown Skills, over Skills known not to work.
+    #If a Need is satisfied, it doesn't suggest its known useful Skill.
+    #When a random Skill is selected, it focuses on testing it.
+
+    #IMPORTANT DISCLAIMER: this Logic saves Skill objects in its memory. A more future-proof way of doing this would be to save Skill name strings to search among the actor's
+    # Skills. This way it would be 100% compatible with skills that might change their parameters. I haven't tested wether this Logic's memory is truly dynamic or not.
+    # Perhaps it could have a way to update its memory using the buddy's Skills list.
     def __init__(self, name, parameters):
         super().__init__(name, parameters)
         self.memory={}
         self.target_skill=None
     def deduce_skill(self, buddy, need):
-        #If it knows a skill that worked, it returns that
+        #When deducing a Skill based on a need:
+        #If Need is satisfied, returns None
         if need.is_satisfied():
             print("It doesn't think it should do anything about that.")
             return None
+        #If it knows a Skill that worked, returns that
         if need.name in self.memory.keys() and self.memory[need.name][1]:
             skill=self.memory[need.name][0]
             print('It recalls doing '+skill.name+' worked.')
             return skill
-        #Otherwise returns a random unknown skill if there's any left, or a random one if there isn't
+        #Otherwise returns a skill it's testing, a random unknown skill if there's any left, or a random one if there isn't
         else:
-            knowns=[row[0] for row in self.memory.values()]
-            unknowns=[skill for skill in buddy.skills if isinstance(skill,(aconcreteskill)) and skill not in knowns]
             if self.target_skill is not None:
                 skill = self.target_skill
                 print("It's trying to see if "+skill.name+' works for something.')
                 return skill
+            
+            knowns=[row[0] for row in self.memory.values()]
+            unknowns=[skill for skill in buddy.skills if isinstance(skill,(aconcreteskill)) and skill not in knowns]
             if len(unknowns)>0 and self.target_skill is None:
                 skill=rng.choice(unknowns,shuffle=False)
                 print("It hasn't tried doing "+skill.name+", maybe that'll work.")
@@ -247,21 +258,26 @@ class RandomMemoryLogic(alogic):
                 considering.remove(entry[0])
         result.extend(considering)
         if len(result)<1:
-            #This state should never be attained.
-            print("It thinks nothing will work!")
+            print("There's nothing it thinks it should do...")
         return result
 
 class astrategy(askill):
-    #A strategy is a skill that determines how the action queue is to be performed.
+    #A Strategy is a Skill that determines how the action queue is to be performed.
     def __init__(self, name, parameters):
         super().__init__(name, parameters)
     def action(self, buddy, top=True):
         skill=buddy.queue.pop(0)
         buddy.logic.evaluate_result(buddy,skill)
         pass
+
+class DefaultStrategy(astrategy):
+    #A Strategy that performs the first skill of a queue
+    def __init__(self):
+        super().__init__('Perform most important', 0)
     
 class MultiSkill(astrategy):
-    #This doesn't correctly support actions that result in new needs!
+    #A Strategy that performs multiple Skills in sequence from the queue depending on the Buddy's remaining Stamina.
+    #DISCLAIMER: This doesn't currently support actions that result in new needs, the queue is locked in during the feel phase and not updated inbetween steps of the Strategy.
     def __init__(self, name, parameters):
         super().__init__(name, parameters)
     def action(self,buddy):
@@ -304,5 +320,8 @@ class MultiSkill(astrategy):
             buddy.logic.evaluate_result(buddy,skill)
             if has_stamina:
                 buddy.needs[chosen_idx].decay()
+                if buddy.needs[chosen_idx].data<1:
+                    print('Buddy '+buddy.name+" has run out of "+buddy.needs[chosen_idx].name+"!")
+                    break
         
         return
